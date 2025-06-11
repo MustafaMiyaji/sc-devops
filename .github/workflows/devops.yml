@@ -12,75 +12,93 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repo
+      - name: 📥 Checkout Repo
         uses: actions/checkout@v3
 
-      - name: Setup Node
+      - name: ⚙️ Setup Node
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
-      - name: Install Dependencies
-        run: npm install
+      - name: 📦 Install Dependencies
+        run: npm ci
 
-      - name: Run Tests
+      - name: 🔨 Compile Contracts
+        run: npx hardhat compile
+
+      - name: 🧪 Run Tests
         run: npx hardhat test
 
   slither:
     name: 🔐 Slither Security Scan
     runs-on: ubuntu-latest
+    needs: test
 
     steps:
-      - name: Checkout Repo
+      - name: 📥 Checkout Repo
         uses: actions/checkout@v3
 
-      - name: Install Slither
+      - name: ⚙️ Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: 📦 Install Node & Hardhat Dependencies
+        run: npm ci
+
+      - name: 🔨 Compile Contracts
+        run: npx hardhat compile
+
+      - name: 🐍 Install Slither
         run: |
           sudo apt-get update
           sudo apt-get install -y python3-pip
           pip3 install slither-analyzer
 
-      - name: Run Slither
+      - name: 🔍 Run Slither Analysis
         run: slither .
 
   mythril:
     name: 🛡️ Mythril Security Scan
     runs-on: ubuntu-latest
+    needs: test
 
     steps:
-      - name: Checkout Repo
+      - name: 📥 Checkout Repo
         uses: actions/checkout@v3
 
-      - name: Install Mythril
+      - name: 🐍 Install Mythril
         run: |
           sudo apt-get update
           sudo apt-get install -y python3-pip
           pip3 install mythril
 
-      - name: Run Mythril
+      - name: 🧪 Run Mythril on Greeter.sol
         run: myth analyze contracts/Greeter.sol
 
   deploy:
-    name: 🚀 Deploy to Testnet (Optional)
-    needs: test
+    name: 🚀 Deploy to Testnet (Sepolia)
     runs-on: ubuntu-latest
+    needs: test
     if: github.ref == 'refs/heads/main'
 
     steps:
-      - name: Checkout Code
+      - name: 📥 Checkout Code
         uses: actions/checkout@v3
 
-      - name: Setup Node
+      - name: ⚙️ Setup Node
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
-      - name: Install Dependencies
-        run: npm install
+      - name: 📦 Install Dependencies
+        run: npm ci
 
-      - name: Deploy to Sepolia
+      - name: 🔨 Compile Contracts
+        run: npx hardhat compile
+
+      - name: 🚀 Deploy to Sepolia
         env:
           MNEMONIC: ${{ secrets.MNEMONIC }}
           INFURA_API_KEY: ${{ secrets.INFURA_API_KEY }}
         run: npx hardhat run scripts/deploy.js --network sepolia
-
