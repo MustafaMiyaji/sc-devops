@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  devops-app:
+    build: .
+    container_name: sc-devops
+    volumes:
+      - .:/app
+    working_dir: /app
+    env_file:
+      - .env
+    command: npx hardhat test
+
