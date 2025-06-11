@@ -1,0 +1,86 @@
+name: SC DevOps CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: 🧪 Hardhat Contract Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Tests
+        run: npx hardhat test
+
+  slither:
+    name: 🔐 Slither Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Install Slither
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip
+          pip3 install slither-analyzer
+
+      - name: Run Slither
+        run: slither .
+
+  mythril:
+    name: 🛡️ Mythril Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Install Mythril
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip
+          pip3 install mythril
+
+      - name: Run Mythril
+        run: myth analyze contracts/Greeter.sol
+
+  deploy:
+    name: 🚀 Deploy to Testnet (Optional)
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Deploy to Sepolia
+        env:
+          MNEMONIC: ${{ secrets.MNEMONIC }}
+          INFURA_API_KEY: ${{ secrets.INFURA_API_KEY }}
+        run: npx hardhat run scripts/deploy.js --network sepolia
+
