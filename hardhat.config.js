@@ -25,36 +25,35 @@ const chainIds = {
   ropsten: 3,
 };
 
-// Ensure that we have all the environment variables we need.
-const mnemonic = process.env.MNEMONIC;
-if (!mnemonic) {
-  throw new Error("Please set your MNEMONIC in a .env file");
-}
+// Detect if deployment is occurring
+const isDeploying = process.argv.includes("deploy") || process.argv.includes("run");
 
+const mnemonic = process.env.MNEMONIC;
 const infuraApiKey = process.env.INFURA_API_KEY;
-if (!infuraApiKey) {
-  throw new Error("Please set your INFURA_API_KEY in a .env file");
+
+if (isDeploying && !mnemonic) {
+  throw new Error("Please set your MNEMONIC in a .env file for deployment.");
+}
+if (isDeploying && !infuraApiKey) {
+  throw new Error("Please set your INFURA_API_KEY in a .env file for deployment.");
 }
 
 function getChainConfig(network) {
-  const url = "https://" + network + ".infura.io/v3/" + infuraApiKey;
+  const url = `https://${network}.infura.io/v3/${infuraApiKey}`;
   return {
     accounts: {
       initialIndex: 0,
       count: 10,
-      mnemonic,
+      mnemonic: mnemonic || "test test test test test test test test test test test junk",
       path: "m/44'/60'/0'/0",
     },
     chainId: chainIds[network],
     tags: (network === "mainnet" && ["production"]) || ["staging"],
     url,
-    live: (network === "mainnet" && true) || false,
+    live: network === "mainnet",
     saveDeployments: true,
   };
 }
-
-// You need to export an object to set up your config
-// Go to https://hardhat.org/config/ to learn more
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
@@ -65,23 +64,19 @@ module.exports = {
     sources: "./contracts",
     tests: "./test",
     cache: "./cache",
-    artifacts: "./artifacts", // build
+    artifacts: "./artifacts",
   },
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
       accounts: {
-        mnemonic,
+        mnemonic: mnemonic || "test test test test test test test test test test test junk",
       },
       chainId: chainIds.hardhat,
-      // See https://github.com/sc-forks/solidity-coverage/issues/652
       hardfork: process.env.CODE_COVERAGE ? "berlin" : "london",
       forking: {
-        // forking is enabled only if FORKING_URL env is provided
         enabled: !!process.env.FORKING_URL,
-        // URL should point to a node with archival data (Alchemy recommended)
         url: process.env.FORKING_URL || "https://eth-mainnet.alchemyapi.io/v2/<key>",
-        // latest block is taken if FORKING_BLOCK env is not provided
         blockNumber: (process.env.FORKING_BLOCK && parseInt(process.env.FORKING_BLOCK)) || 0,
       },
       tags: ["test", "local"],
@@ -103,12 +98,12 @@ module.exports = {
     path: "./abi",
     clear: true,
     flat: true,
-    only: [],
-    except: [],
     spacing: 2,
   },
   preprocess: {
-    eachLine: removeConsoleLog(bre => bre.network.name !== "hardhat" && bre.network.name !== "localhost"),
+    eachLine: removeConsoleLog(
+      (bre) => bre.network.name !== "hardhat" && bre.network.name !== "localhost"
+    ),
   },
   gasReporter: {
     currency: "EUR",
@@ -135,10 +130,11 @@ module.exports = {
   },
   namedAccounts: {
     deployer: {
-      default: 0, // take the first account as deployer
+      default: 0,
     },
   },
   mocha: {
     timeout: 60000,
   },
 };
+
